@@ -4,31 +4,30 @@ namespace App\Livewire;
 
 use App\Models\User;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 class Todo extends Component
 {
-    public $name;
-    public $todos;
+    use WithPagination;
 
-    public function mount()
-    {
-        $this->todos = \App\Models\Todo::all();
-    }
+    public $name;
+    public $search;
+    protected $rules = [
+        'name' => 'required|string',
+    ];
 
     public function createTodo()
     {
-        $this->validate([
-            'name' => 'required|string',
-        ]);
+        $this->validate();
 
         \App\Models\Todo::create([
-            'name' => $this->name
+            'name' => $this->name,
         ]);
 
-        $this->reset(['name']);
+        $this->reset('name');
         session()->flash('success', 'Todo created successfully');
-        $this->todos = \App\Models\Todo::all(); // Refresh the todos list
     }
+
     public function deleteTodo($todoId)
     {
         $todo = \App\Models\Todo::find($todoId);
@@ -36,13 +35,31 @@ class Todo extends Component
         if ($todo) {
             $todo->delete();
             session()->flash('success', 'Todo deleted successfully');
-            // Update $todos property after successful deletion
-            $this->todos = \App\Models\Todo::all(); // Refresh the todos list
         }
     }
 
     public function render()
     {
-        return view('livewire.todo', ['todos' => $this->todos]);
+        $query = \App\Models\Todo::latest();
+
+        if (!empty($this->search)) {
+            $query->where('name', 'like', "%{$this->search}%");
+            $todos = $query->paginate(5);
+      
+            if ($todos->isEmpty()) {
+                session()->flash('search-success', 'Todo not found');
+            } else {
+                session()->flash('search-success', 'Todo has been found');
+            }
+        } else {
+            $todos = $query->paginate(5);
+        }
+
+        return view('livewire.todo', ['todos' => $todos]);
     }
+
+
+
+
+
 }
