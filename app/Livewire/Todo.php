@@ -12,6 +12,9 @@ class Todo extends Component
 
     public $name;
     public $search;
+
+    public $editingTodoId;
+    public $editingTodoName;
     protected $rules = [
         'name' => 'required|string',
     ];
@@ -26,6 +29,8 @@ class Todo extends Component
 
         $this->reset('name');
         session()->flash('success', 'Todo created successfully');
+
+        $this->resetPage();
     }
 
     public function deleteTodo($todoId)
@@ -37,7 +42,35 @@ class Todo extends Component
             session()->flash('success', 'Todo deleted successfully');
         }
     }
+    public function edit($todoId)
+    {
+        $this->editingTodoId = $todoId;
+        $this->editingTodoName = \App\Models\Todo::find($todoId)->name;
+    }
 
+    public function updateTodo()
+    {
+        $this->validate([
+            'editingTodoName' => 'required|string',
+        ]);
+
+        if ($this->editingTodoId) {
+            $todo = \App\Models\Todo::find($this->editingTodoId);
+            $todo->name = $this->editingTodoName;
+            $todo->save();
+
+            session()->flash('success', 'Todo updated successfully');
+        }
+
+        $this->reset('editingTodoId', 'editingTodoName');
+
+        $this->resetPage();
+    }
+
+    public function cancelEditing()
+    {
+        $this->reset('editingTodoId', 'editingTodoName');
+    }
     public function render()
     {
         $query = \App\Models\Todo::latest();
@@ -45,7 +78,7 @@ class Todo extends Component
         if (!empty($this->search)) {
             $query->where('name', 'like', "%{$this->search}%");
             $todos = $query->paginate(5);
-      
+
             if ($todos->isEmpty()) {
                 session()->flash('search-success', 'Todo not found');
             } else {
@@ -57,6 +90,9 @@ class Todo extends Component
 
         return view('livewire.todo', ['todos' => $todos]);
     }
+
+
+
 
 
 
